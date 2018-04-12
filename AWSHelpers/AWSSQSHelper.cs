@@ -29,7 +29,7 @@ namespace AWSHelpers
         ///////////////////////////////////////////////////////////////////////
 
         public AmazonSQSClient        Queue                 { get; set; }   // AMAZON simple queue service reference
-        public GetQueueUrlResponse    QueueUrl              { get; set; }   // AMAZON queue url
+        public string                 QueueUrl              { get; set; }   // AMAZON queue url
         public ReceiveMessageRequest  RcvMessageRequest     { get; set; }   // AMAZON receive message request
         public ReceiveMessageResponse RcvMessageResponse    { get; set; }   // AMAZON receive message response
         public DeleteMessageRequest   DelMessageRequest     { get; set; }   // AMAZON delete message request
@@ -222,16 +222,16 @@ namespace AWSHelpers
                     // Get queue url
                     GetQueueUrlRequest sqsRequest = new GetQueueUrlRequest();
                     sqsRequest.QueueName          = queueName;
-                    QueueUrl                      = Queue.GetQueueUrl(sqsRequest);
+                    QueueUrl                      = Queue.GetQueueUrl(sqsRequest).QueueUrl;
 
                     // Format receive messages request
                     RcvMessageRequest                     = new ReceiveMessageRequest();
-                    RcvMessageRequest.QueueUrl            = QueueUrl.QueueUrl;
+                    RcvMessageRequest.QueueUrl            = QueueUrl;
                     RcvMessageRequest.MaxNumberOfMessages = maxNumberOfMessages;
 
                     // Format the delete messages request
                     DelMessageRequest          = new DeleteMessageRequest();
-                    DelMessageRequest.QueueUrl = QueueUrl.QueueUrl;
+                    DelMessageRequest.QueueUrl = QueueUrl;
 
                     IsValid = true;
                 }
@@ -256,7 +256,7 @@ namespace AWSHelpers
             try
             {
                 GetQueueAttributesRequest attrreq = new GetQueueAttributesRequest();
-                attrreq.QueueUrl = QueueUrl.QueueUrl;
+                attrreq.QueueUrl = QueueUrl;
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessages");
                 GetQueueAttributesResponse attrresp = Queue.GetQueueAttributes(attrreq);
                 if (attrresp != null)
@@ -282,7 +282,7 @@ namespace AWSHelpers
             try
             {
                 GetQueueAttributesRequest attrreq = new GetQueueAttributesRequest();
-                attrreq.QueueUrl = QueueUrl.QueueUrl;
+                attrreq.QueueUrl = QueueUrl;
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessages");
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessagesNotVisible");
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessagesDelayed");
@@ -314,7 +314,7 @@ namespace AWSHelpers
             }
             catch (Exception ex)
             {
-                ErrorCode = e_Exception;
+                ErrorCode    = e_Exception;
                 ErrorMessage = ex.Message;
             }
             return result;
@@ -356,7 +356,7 @@ namespace AWSHelpers
             {
                 DeleteMessageBatchRequest request = new DeleteMessageBatchRequest
                 {
-                    QueueUrl = this.QueueUrl.QueueUrl,
+                    QueueUrl = this.QueueUrl,
                     Entries  = messages.Select (i => new DeleteMessageBatchRequestEntry (i.MessageId, i.ReceiptHandle)).ToList ()
                 };
                 DeleteMessageBatchResponse response = Queue.DeleteMessageBatch(request);
@@ -393,7 +393,7 @@ namespace AWSHelpers
             try
             {
                 SendMessageRequest sendMessageRequest = new SendMessageRequest();
-                sendMessageRequest.QueueUrl    = QueueUrl.QueueUrl;
+                sendMessageRequest.QueueUrl    = QueueUrl;
                 sendMessageRequest.MessageBody = msgBody;
                 Queue.SendMessage(sendMessageRequest);
                 result = true;
@@ -447,7 +447,7 @@ namespace AWSHelpers
             {
                 SendMessageBatchRequest request = new SendMessageBatchRequest
                 {
-                    QueueUrl = this.QueueUrl.QueueUrl
+                    QueueUrl = this.QueueUrl
                 };
                 List<SendMessageBatchRequestEntry> entries = new List<SendMessageBatchRequestEntry> ();
 
@@ -719,7 +719,7 @@ namespace AWSHelpers
         {
             Queue.PurgeQueue (new PurgeQueueRequest
             {
-                QueueUrl = this.QueueUrl.QueueUrl
+                QueueUrl = this.QueueUrl
             });
         }
     }
