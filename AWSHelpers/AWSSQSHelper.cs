@@ -28,30 +28,21 @@ namespace AWSHelpers
         //                           Fields                                  //
         ///////////////////////////////////////////////////////////////////////
 
-        public IAmazonSQS queue                             { get; set; }   // AMAZON simple queue service reference
-        public GetQueueUrlResponse queueurl                 { get; set; }   // AMAZON queue url
-        public ReceiveMessageRequest rcvMessageRequest      { get; set; }   // AMAZON receive message request
-        public ReceiveMessageResponse rcvMessageResponse    { get; set; }   // AMAZON receive message response
-        public DeleteMessageRequest delMessageRequest       { get; set; }   // AMAZON delete message request
+        public AmazonSQSClient        Queue                 { get; set; }   // AMAZON simple queue service reference
+        public GetQueueUrlResponse    QueueUrl              { get; set; }   // AMAZON queue url
+        public ReceiveMessageRequest  RcvMessageRequest     { get; set; }   // AMAZON receive message request
+        public ReceiveMessageResponse RcvMessageResponse    { get; set; }   // AMAZON receive message response
+        public DeleteMessageRequest   DelMessageRequest     { get; set; }   // AMAZON delete message request
+        public bool                   IsValid               { get; set; }   // True when the queue is OK
+        public int                    ErrorCode             { get; set; }   // Last error code
+        public string                 ErrorMessage          { get; set; }   // Last error message
 
-        public bool IsValid                                 { get; set; }   // True when the queue is OK
-
-        public int ErrorCode                                { get; set; }   // Last error code
-        public string ErrorMessage                          { get; set; }   // Last error message
-
-        public const int e_Exception = -1;
-
-        public const int AmazonSQSMaxMessageSize = 256 * 1024;                  // AMAZON queue max message size
-
-        public string AWSAccessKey;                         
-        public string AWSSecretKey;                         
-
+        public const int e_Exception             = -1;
+        public const int AmazonSQSMaxMessageSize = 256 * 1024;                  // AMAZON queue max message size                  
 
         ///////////////////////////////////////////////////////////////////////
         //                    Methods & Functions                            //
         ///////////////////////////////////////////////////////////////////////
-
-
 
         /// <summary>
         /// This method initializes the client in order to avoid writing AWS AccessKey and SecretKey for testing zith XUnit
@@ -72,48 +63,48 @@ namespace AWSHelpers
         /// This static method creates an SQS queue to be used later. For parameter definitions beyond error message, 
         /// please check the online documentation (http://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_CreateQueue.html)
         /// </summary>
-        /// <param name="QueueName">Name of the queue to be created</param>
-        /// <param name="RegionEndpoint">Endpoint corresponding to the AWS region where the queue should be created</param>
-        /// <param name="ErrorMessage">String that will receive the error message, if an error occurs</param>
+        /// <param name="queueName">Name of the queue to be created</param>
+        /// <param name="regionEndpoint">Endpoint corresponding to the AWS region where the queue should be created</param>
+        /// <param name="errorMessage">String that will receive the error message, if an error occurs</param>
         /// <returns>Boolean indicating if the queue was created</returns>        
-        public static bool CreateSQSQueue (string QueueName, RegionEndpoint RegionEndpoint, out string ErrorMessage, int DelaySeconds = 0, int MaximumMessageSize = AmazonSQSMaxMessageSize, 
-                                           int MessageRetentionPeriod = 345600, int ReceiveMessageWaitTimeSeconds = 0, int VisibilityTimeout = 30, string Policy = "",
-                                           string AWSAccessKey = "", string AWSSecretKey = "")
+        public static bool CreateSQSQueue (string queueName, RegionEndpoint regionEndpoint, out string errorMessage, int delaySeconds = 0, int maximumMessageSize = AmazonSQSMaxMessageSize, 
+                                           int messageRetentionPeriod = 345600, int receiveMessageWaitTimeSeconds = 0, int visibilityTimeout = 30, string policy = "",
+                                           string awsAccessKey = "", string awsSecretKey = "")
         {
             bool result = false;
-            ErrorMessage = "";
+            errorMessage = "";
 
             // Validate and adjust input parameters
-            DelaySeconds                  = Math.Min (Math.Max (DelaySeconds, 0), 900);
-            MaximumMessageSize            = Math.Min (Math.Max (MaximumMessageSize, 1024), AmazonSQSMaxMessageSize);
-            MessageRetentionPeriod        = Math.Min (Math.Max (MessageRetentionPeriod, 60), 1209600);
-            ReceiveMessageWaitTimeSeconds = Math.Min (Math.Max (ReceiveMessageWaitTimeSeconds, 0), 20);
-            VisibilityTimeout             = Math.Min (Math.Max (VisibilityTimeout, 0), 43200);
+            delaySeconds                  = Math.Min (Math.Max (delaySeconds,                  0),    900);
+            maximumMessageSize            = Math.Min (Math.Max (maximumMessageSize,            1024), AmazonSQSMaxMessageSize);
+            messageRetentionPeriod        = Math.Min (Math.Max (messageRetentionPeriod,        60),   1209600);
+            receiveMessageWaitTimeSeconds = Math.Min (Math.Max (receiveMessageWaitTimeSeconds, 0),    20);
+            visibilityTimeout             = Math.Min (Math.Max (visibilityTimeout,             0),    43200);
 
-            if (!String.IsNullOrWhiteSpace (QueueName))
+            if (!String.IsNullOrWhiteSpace (queueName))
             {
                 IAmazonSQS queueClient;
 
-                if (!String.IsNullOrEmpty(AWSAccessKey))
+                if (!String.IsNullOrEmpty(awsAccessKey))
                 {
-                    queueClient = AWSClientFactory.CreateAmazonSQSClient (AWSAccessKey, AWSSecretKey, RegionEndpoint);
+                    queueClient = AWSClientFactory.CreateAmazonSQSClient (awsAccessKey, awsSecretKey, regionEndpoint);
                 }
                 else
                 {
-                    queueClient = AWSClientFactory.CreateAmazonSQSClient (RegionEndpoint);
+                    queueClient = AWSClientFactory.CreateAmazonSQSClient (regionEndpoint);
                 }
                 try
                 {
                     // Generate the queue creation request
                     CreateQueueRequest createRequest = new CreateQueueRequest ();
-                    createRequest.QueueName = QueueName;
+                    createRequest.QueueName = queueName;
 
                     // Add other creation parameters
-                    createRequest.Attributes.Add ("DelaySeconds",                  DelaySeconds.ToString ());
-                    createRequest.Attributes.Add ("MaximumMessageSize",            MaximumMessageSize.ToString ());
-                    createRequest.Attributes.Add ("MessageRetentionPeriod",        MessageRetentionPeriod.ToString ());
-                    createRequest.Attributes.Add ("ReceiveMessageWaitTimeSeconds", ReceiveMessageWaitTimeSeconds.ToString ());
-                    createRequest.Attributes.Add ("VisibilityTimeout",             VisibilityTimeout.ToString ());
+                    createRequest.Attributes.Add ("DelaySeconds",                  delaySeconds.ToString ());
+                    createRequest.Attributes.Add ("MaximumMessageSize",            maximumMessageSize.ToString ());
+                    createRequest.Attributes.Add ("MessageRetentionPeriod",        messageRetentionPeriod.ToString ());
+                    createRequest.Attributes.Add ("ReceiveMessageWaitTimeSeconds", receiveMessageWaitTimeSeconds.ToString ());
+                    createRequest.Attributes.Add ("VisibilityTimeout",             visibilityTimeout.ToString ());
 
                     // Run the request
                     CreateQueueResponse createResponse = queueClient.CreateQueue (createRequest);
@@ -121,19 +112,19 @@ namespace AWSHelpers
                     // Check for errros
                     if (createResponse.HttpStatusCode != System.Net.HttpStatusCode.OK)
                     {
-                        ErrorMessage = "An error occurred while creating the queue. Please try again."; 
+                        errorMessage = "An error occurred while creating the queue. Please try again."; 
                     }
 
                     result = true;
                 }
                 catch (Exception ex)
                 {
-                    ErrorMessage = ex.Message;
+                    errorMessage = ex.Message;
                 }
             }
             else
             {
-                ErrorMessage = "Invalid Queue Name";
+                errorMessage = "Invalid Queue Name";
             }
 
             return result;
@@ -142,38 +133,37 @@ namespace AWSHelpers
         /// <summary>
         /// This static method deletes a SQS queue. Once deleted, the queue and any messages on it will no longer be available.
         /// </summary>
-        /// <param name="QueueName">The name of the queue to be deleted</param>
-        /// <param name="RegionEndpoint">Endpoint corresponding to the AWS region where the queue is located</param>
-        /// <param name="ErrorMessage">String that will receive the error message, if an error occurs</param>
+        /// <param name="queueName">The name of the queue to be deleted</param>
+        /// <param name="regionEndpoint">Endpoint corresponding to the AWS region where the queue is located</param>
+        /// <param name="errorMessage">String that will receive the error message, if an error occurs</param>
         /// <returns></returns>
-        public static bool DestroySQSQueue (string QueueName, RegionEndpoint RegionEndpoint, out string ErrorMessage, string AWSAccessKey = "", string AWSSecretKey = "")
+        public static bool DestroySQSQueue (string queueName, RegionEndpoint regionEndpoint, out string errorMessage, string awsAccessKey = "", string awsSecretKey = "")
         {
             bool result = false;
-            ErrorMessage = "";
+            errorMessage = "";
             IAmazonSQS queueClient;
 
-
-            if (!String.IsNullOrWhiteSpace (QueueName))
+            if (!String.IsNullOrWhiteSpace (queueName))
             {
-                if (!String.IsNullOrEmpty (AWSAccessKey))
+                if (!String.IsNullOrEmpty (awsAccessKey))
                 {
-                    queueClient = AWSClientFactory.CreateAmazonSQSClient (AWSAccessKey, AWSSecretKey, RegionEndpoint);
+                    queueClient = AWSClientFactory.CreateAmazonSQSClient (awsAccessKey, awsSecretKey, regionEndpoint);
                 }
                 else
                 {
-                    queueClient = AWSClientFactory.CreateAmazonSQSClient (RegionEndpoint);
+                    queueClient = AWSClientFactory.CreateAmazonSQSClient (regionEndpoint);
                 }
                 try
                 {
                     // Load the queue URL
-                    string url = queueClient.GetQueueUrl (QueueName).QueueUrl;
+                    string url = queueClient.GetQueueUrl (queueName).QueueUrl;
 
                     // Destroy the queue
                     queueClient.DeleteQueue (url);
                 }
                 catch (Exception ex)
                 {
-                    ErrorMessage = ex.Message;
+                    errorMessage = ex.Message;
                 }
             }
 
@@ -185,6 +175,7 @@ namespace AWSHelpers
         /// </summary>
         public AWSSQSHelper()
         {
+
         }
 
         /// <summary>
@@ -193,9 +184,9 @@ namespace AWSHelpers
         /// <param name="queueName">The name of the queue to be opened when we create the class</param>
         /// <param name="maxNumberOfMessages">The maximum number of messages that will be received upon a GET request</param>
         /// <param name="regionEndpoint">Endpoint corresponding to the AWS region where the queue we want to open resides</param>
-        public AWSSQSHelper (string queueName, int maxNumberOfMessages, RegionEndpoint regionEndpoint, String AWSAccessKey="", String AWSSecretKey="")
+        public AWSSQSHelper (string queueName, int maxNumberOfMessages, RegionEndpoint regionEndpoint, string awsAccessKey="", string awsSecretKey="")
         {
-            OpenQueue(queueName, maxNumberOfMessages, regionEndpoint,AWSAccessKey,AWSSecretKey);
+            OpenQueue(queueName, maxNumberOfMessages, regionEndpoint, awsAccessKey, awsSecretKey);
         }
 
         /// <summary>
@@ -203,44 +194,44 @@ namespace AWSHelpers
         /// </summary>
         private void ClearErrorInfo()
         {
-            ErrorCode = 0;
+            ErrorCode    = 0;
             ErrorMessage = string.Empty;
         }
 
         /// <summary>
         /// The method opens the queue
         /// </summary>
-        public bool OpenQueue(string queuename, int maxnumberofmessages, RegionEndpoint regionendpoint,String AWSAccessKey="", String AWSSecretKey="")
+        public bool OpenQueue(string queueName, int maxNumberOfMessages, RegionEndpoint regionEndpoint, string awsAccessKey="", string awsSecretKey="")
         {
             ClearErrorInfo();
 
             IsValid = false;
 
-            if (!string.IsNullOrWhiteSpace(queuename))
+            if (!String.IsNullOrWhiteSpace(queueName))
             {
-                if (!String.IsNullOrEmpty (AWSAccessKey))
+                if (!String.IsNullOrEmpty (awsAccessKey))
                 {
-                    queue = AWSClientFactory.CreateAmazonSQSClient (AWSAccessKey, AWSSecretKey,regionendpoint);
+                    Queue = (AmazonSQSClient) AWSClientFactory.CreateAmazonSQSClient (awsAccessKey, awsSecretKey, regionEndpoint);
                 }
                 else
                 {
-                    queue = AWSClientFactory.CreateAmazonSQSClient (regionendpoint);
+                    Queue = (AmazonSQSClient) AWSClientFactory.CreateAmazonSQSClient(regionEndpoint);
                 }
                 try
                 {
                     // Get queue url
                     GetQueueUrlRequest sqsRequest = new GetQueueUrlRequest();
-                    sqsRequest.QueueName          = queuename;
-                    queueurl                      = queue.GetQueueUrl(sqsRequest);
+                    sqsRequest.QueueName          = queueName;
+                    QueueUrl                      = Queue.GetQueueUrl(sqsRequest);
 
                     // Format receive messages request
-                    rcvMessageRequest                     = new ReceiveMessageRequest();
-                    rcvMessageRequest.QueueUrl            = queueurl.QueueUrl;
-                    rcvMessageRequest.MaxNumberOfMessages = maxnumberofmessages;
+                    RcvMessageRequest                     = new ReceiveMessageRequest();
+                    RcvMessageRequest.QueueUrl            = QueueUrl.QueueUrl;
+                    RcvMessageRequest.MaxNumberOfMessages = maxNumberOfMessages;
 
                     // Format the delete messages request
-                    delMessageRequest          = new DeleteMessageRequest();
-                    delMessageRequest.QueueUrl = queueurl.QueueUrl;
+                    DelMessageRequest          = new DeleteMessageRequest();
+                    DelMessageRequest.QueueUrl = QueueUrl.QueueUrl;
 
                     IsValid = true;
                 }
@@ -265,15 +256,15 @@ namespace AWSHelpers
             try
             {
                 GetQueueAttributesRequest attrreq = new GetQueueAttributesRequest();
-                attrreq.QueueUrl = queueurl.QueueUrl;
+                attrreq.QueueUrl = QueueUrl.QueueUrl;
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessages");
-                GetQueueAttributesResponse attrresp = queue.GetQueueAttributes(attrreq);
+                GetQueueAttributesResponse attrresp = Queue.GetQueueAttributes(attrreq);
                 if (attrresp != null)
                     result = attrresp.ApproximateNumberOfMessages;
             }
             catch (Exception ex)
             {
-                ErrorCode = e_Exception;
+                ErrorCode    = e_Exception;
                 ErrorMessage = ex.Message;
             }
 
@@ -291,17 +282,17 @@ namespace AWSHelpers
             try
             {
                 GetQueueAttributesRequest attrreq = new GetQueueAttributesRequest();
-                attrreq.QueueUrl = queueurl.QueueUrl;
+                attrreq.QueueUrl = QueueUrl.QueueUrl;
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessages");
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessagesNotVisible");
                 attrreq.AttributeNames.Add("ApproximateNumberOfMessagesDelayed");
-                GetQueueAttributesResponse attrresp = queue.GetQueueAttributes(attrreq);
+                GetQueueAttributesResponse attrresp = Queue.GetQueueAttributes(attrreq);
                 if (attrresp != null)
                     result = attrresp.ApproximateNumberOfMessages + attrresp.ApproximateNumberOfMessagesNotVisible + attrresp.ApproximateNumberOfMessagesDelayed;
             }
             catch (Exception ex)
             {
-                ErrorCode = e_Exception;
+                ErrorCode    = e_Exception;
                 ErrorMessage = ex.Message;
             }
 
@@ -318,7 +309,7 @@ namespace AWSHelpers
             bool result = false;
             try
             {
-                rcvMessageResponse = queue.ReceiveMessage(rcvMessageRequest);
+                RcvMessageResponse = Queue.ReceiveMessage(RcvMessageRequest);
                 result = true;
             }
             catch (Exception ex)
@@ -339,13 +330,13 @@ namespace AWSHelpers
             bool result = false;
             try
             {
-                delMessageRequest.ReceiptHandle = message.ReceiptHandle;
-                queue.DeleteMessage(delMessageRequest);
+                DelMessageRequest.ReceiptHandle = message.ReceiptHandle;
+                Queue.DeleteMessage(DelMessageRequest);
                 result = true;
             }
             catch (Exception ex)
             {
-                ErrorCode = e_Exception;
+                ErrorCode    = e_Exception;
                 ErrorMessage = ex.Message;
             }
 
@@ -363,12 +354,12 @@ namespace AWSHelpers
 
             try
             {
-                var request = new DeleteMessageBatchRequest
+                DeleteMessageBatchRequest request = new DeleteMessageBatchRequest
                 {
-                    QueueUrl = queueurl.QueueUrl,
-                    Entries = messages.Select (i => new DeleteMessageBatchRequestEntry (i.MessageId, i.ReceiptHandle)).ToList ()
+                    QueueUrl = this.QueueUrl.QueueUrl,
+                    Entries  = messages.Select (i => new DeleteMessageBatchRequestEntry (i.MessageId, i.ReceiptHandle)).ToList ()
                 };
-                var response = queue.DeleteMessageBatch (request);
+                DeleteMessageBatchResponse response = Queue.DeleteMessageBatch(request);
 
                 if (response.Failed != null && response.Failed.Count > 0)
                 {
@@ -394,7 +385,7 @@ namespace AWSHelpers
         /// <summary>
         /// Insert a message in the queue
         /// </summary>
-        public bool EnqueueMessage(string msgbody)
+        public bool EnqueueMessage(string msgBody)
         {
             ClearErrorInfo();
 
@@ -402,14 +393,14 @@ namespace AWSHelpers
             try
             {
                 SendMessageRequest sendMessageRequest = new SendMessageRequest();
-                sendMessageRequest.QueueUrl = queueurl.QueueUrl;
-                sendMessageRequest.MessageBody = msgbody;
-                queue.SendMessage(sendMessageRequest);
+                sendMessageRequest.QueueUrl    = QueueUrl.QueueUrl;
+                sendMessageRequest.MessageBody = msgBody;
+                Queue.SendMessage(sendMessageRequest);
                 result = true;
             }
             catch (Exception ex)
             {
-                ErrorCode = e_Exception;
+                ErrorCode    = e_Exception;
                 ErrorMessage = ex.Message;
             }
 
@@ -419,15 +410,15 @@ namespace AWSHelpers
         /// <summary>
         /// Insert a message in the queue and retry if an error is detected
         /// </summary>
-        public bool EnqueueMessage(string msgbody, int maxretries)
+        public bool EnqueueMessage(string msgBody, int maxRetries)
         {
             // Insert domain info into queue
-            bool result = false;
-            int retrycount = maxretries;
+            bool result    = false;
+            int retrycount = maxRetries;
             while (true)
             {
                 // Try the insertion
-                if (EnqueueMessage(msgbody))
+                if (EnqueueMessage(msgBody))
                 {
                     result = true;
                     break;
@@ -454,9 +445,9 @@ namespace AWSHelpers
             bool result = false;
             try
             {
-                var request = new SendMessageBatchRequest
+                SendMessageBatchRequest request = new SendMessageBatchRequest
                 {
-                    QueueUrl = queueurl.QueueUrl
+                    QueueUrl = this.QueueUrl.QueueUrl
                 };
                 List<SendMessageBatchRequestEntry> entries = new List<SendMessageBatchRequestEntry> ();
 
@@ -469,10 +460,10 @@ namespace AWSHelpers
                     entries.Clear ();
 
                     // Storing upper limit of iteration
-                    var len = Math.Min (ix + 10, messages.Count);
+                    int len = Math.Min (ix + 10, messages.Count);
 
                     // Iterating over 10
-                    for (var i = ix; i < len; i++)
+                    for (int i = ix; i < len; i++)
                     {
                         entries.Add (new SendMessageBatchRequestEntry (i.ToString (), messages[i]));
                         ix++;
@@ -482,7 +473,7 @@ namespace AWSHelpers
                     request.Entries = entries;
 
                     // Batch Sending
-                    var response = queue.SendMessageBatch (request);
+                    SendMessageBatchResponse response = Queue.SendMessageBatch (request);
 
                     // If any message failed to enqueue, use individual enqueue method
                     if (response.Failed != null && response.Failed.Count > 0)
@@ -490,7 +481,7 @@ namespace AWSHelpers
                         // Hiccup
                         Thread.Sleep (100);
 
-                        foreach (var failedMessage in response.Failed)
+                        foreach (BatchResultErrorEntry failedMessage in response.Failed)
                         {
                             // Individual Enqueues
                             EnqueueMessage (failedMessage.Message);
@@ -517,10 +508,10 @@ namespace AWSHelpers
         {
             try
             {
-                if (rcvMessageResponse == null)
+                if (RcvMessageResponse == null)
                     return false;
 
-                var messageResults = rcvMessageResponse.Messages;
+                List<Message> messageResults = RcvMessageResponse.Messages;
 
                 if (messageResults != null && messageResults.FirstOrDefault () != null)
                 {
@@ -540,7 +531,7 @@ namespace AWSHelpers
         /// </summary>
         public IEnumerable<Message> GetDequeuedMessages ()
         {
-            return rcvMessageResponse.Messages;
+            return RcvMessageResponse.Messages;
         }
 
         /// <summary>
@@ -571,7 +562,7 @@ namespace AWSHelpers
                 }
                 catch (Exception ex)
                 {
-                    ErrorCode = e_Exception;
+                    ErrorCode    = e_Exception;
                     ErrorMessage = ex.Message;
                     if (throwOnError)
                         throw ex;
@@ -601,7 +592,7 @@ namespace AWSHelpers
             do
             {
                 // dequeue messages
-                foreach (var message in GetMessages (throwOnError))
+                foreach (Message message in GetMessages (throwOnError))
                 {
                     // Reseting fallback time
                     fallbackWaitTime = 1;
@@ -661,7 +652,7 @@ namespace AWSHelpers
                 }
 
                 // Retrieving Message Results
-                var resultMessages = rcvMessageResponse.Messages;
+                List<Message> resultMessages = RcvMessageResponse.Messages;
 
                 // Checking for no message dequeued
                 if (resultMessages.Count == 0)
@@ -683,15 +674,15 @@ namespace AWSHelpers
         /// This method repeatedly dequeues messages from several queues until there are no messages left
         /// </summary>
         /// <param name="queueNames">The names of the queues we want to clear.</param>
-        /// <param name="regionendpoint">The region endpoint for the AWS region we're using</param>
-        public void ClearQueues (List<String> queueNames, RegionEndpoint regionendpoint)
+        /// <param name="regionEndpoint">The region endpoint for the AWS region we're using</param>
+        public void ClearQueues (List<String> queueNames, RegionEndpoint regionEndpoint)
         {
             // TODO: We must alter the code to check how many messages are left in the queue. If there are too many messages, we should destroy the queue, wait one minute, and create it again.
 
             // Iterating over queues
             foreach (string queueName in queueNames)
             {
-                OpenQueue (queueName, 10, regionendpoint);
+                OpenQueue (queueName, 10, regionEndpoint);
 
                 do
                 {
@@ -702,7 +693,7 @@ namespace AWSHelpers
                     }
 
                     // Retrieving Message Results
-                    var resultMessages = rcvMessageResponse.Messages;
+                    List<Message> resultMessages = RcvMessageResponse.Messages;
 
                     // Checking for no message dequeued
                     if (resultMessages.Count == 0)
@@ -726,9 +717,9 @@ namespace AWSHelpers
         /// </summary>
         public void PurgeQueue ()
         {
-            queue.PurgeQueue (new PurgeQueueRequest
+            Queue.PurgeQueue (new PurgeQueueRequest
             {
-                QueueUrl = queueurl.QueueUrl
+                QueueUrl = this.QueueUrl.QueueUrl
             });
         }
     }
