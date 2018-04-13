@@ -38,7 +38,14 @@ namespace AWSHelpers
         public string                 ErrorMessage          { get; set; }   // Last error message
 
         public const int e_Exception             = -1;
-        public const int AmazonSQSMaxMessageSize = 256 * 1024;                  // AMAZON queue max message size                  
+        public const int AmazonSQSMaxMessageSize = 256 * 1024;                  // AMAZON queue max message size
+
+        public string AWSAccessKey;
+        public string AWSSecretKey;
+
+        private bool _forceUseLongPolling  = false;
+        private const int _defaultWaitTimeSeconds = 20;
+        private int _waitTimeSeconds = 0;
 
         ///////////////////////////////////////////////////////////////////////
         //                    Methods & Functions                            //
@@ -184,9 +191,12 @@ namespace AWSHelpers
         /// <param name="queueName">The name of the queue to be opened when we create the class</param>
         /// <param name="maxNumberOfMessages">The maximum number of messages that will be received upon a GET request</param>
         /// <param name="regionEndpoint">Endpoint corresponding to the AWS region where the queue we want to open resides</param>
-        public AWSSQSHelper (string queueName, int maxNumberOfMessages, RegionEndpoint regionEndpoint, string awsAccessKey="", string awsSecretKey="")
+        public AWSSQSHelper (string queueName, int maxNumberOfMessages, RegionEndpoint regionEndpoint, string awsAccessKey="", string awsSecretKey="", int waitTimeSeconds=0)
         {
-            OpenQueue(queueName, maxNumberOfMessages, regionEndpoint, awsAccessKey, awsSecretKey);
+            AWSAccessKey = awsAccessKey;
+            AWSSecretKey = awsSecretKey;
+
+            OpenQueue(queueName, maxNumberOfMessages, regionEndpoint, awsAccessKey, awsSecretKey, waitTimeSeconds);
         }
 
         /// <summary>
@@ -201,8 +211,10 @@ namespace AWSHelpers
         /// <summary>
         /// The method opens the queue
         /// </summary>
-        public bool OpenQueue(string queueName, int maxNumberOfMessages, RegionEndpoint regionEndpoint, string awsAccessKey="", string awsSecretKey="")
+        public bool OpenQueue(string queueName, int maxNumberOfMessages, RegionEndpoint regionEndpoint, string awsAccessKey="", string awsSecretKey="", int waitTimeSeconds=0)
         {
+            _waitTimeSeconds = waitTimeSeconds;
+
             ClearErrorInfo();
 
             IsValid = false;
@@ -228,6 +240,7 @@ namespace AWSHelpers
                     RcvMessageRequest                     = new ReceiveMessageRequest();
                     RcvMessageRequest.QueueUrl            = QueueUrl;
                     RcvMessageRequest.MaxNumberOfMessages = maxNumberOfMessages;
+                    RcvMessageRequest.WaitTimeSeconds     = _waitTimeSeconds;
 
                     // Format the delete messages request
                     DelMessageRequest          = new DeleteMessageRequest();
@@ -551,7 +564,18 @@ namespace AWSHelpers
                 // Checking for no message received, and false positives situations
                 if (!AnyMessageReceived ())
                 {
+                    _forceUseLongPolling = true;
+
+                    if (_waitTimeSeconds == 0)
+                        RcvMessageRequest.WaitTimeSeconds = _defaultWaitTimeSeconds;
+
                     break;
+                }
+
+                if (_forceUseLongPolling)
+                {
+                    _forceUseLongPolling = false;
+                    RcvMessageRequest.WaitTimeSeconds = _waitTimeSeconds;
                 }
 
                 // Iterating over dequeued messages
