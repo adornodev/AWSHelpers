@@ -254,7 +254,7 @@ namespace AWSHelpers
         /// <param name="facets">The "facets" parameter (for data grouping)</param>
         /// <param name="returnFields">List of fields to be returned. By default, all return-enabled fields are returned.</param>
         /// <returns></returns>
-        public bool RunDocumentSearch (string searchQuery, string filterQuery = "", string cursor = "", string parser = "simple", int start = 0, int size = 10, List<AWSCloudSearchExpressionDefinition> expressions = null, List<AWSCloudSearchFacetFieldDefinition> facets = null, List<string> returnFields = null, string queryOptions = "")
+        public bool RunDocumentSearch (string searchQuery, string filterQuery = "", string cursor = "", string parser = "simple", int start = 0, int size = 10, List<AWSCloudSearchExpressionDefinition> expressions = null, List<AWSCloudSearchFacetFieldDefinition> facets = null, List<string> returnFields = null, string queryOptions = "", string sort = "")
         {
             ClearErrorInfo ();
             ClearSearchResults ();
@@ -265,7 +265,8 @@ namespace AWSHelpers
                 searchRequest.Query         = searchQuery;
                 searchRequest.QueryParser   = parser;
                 searchRequest.Size          = size;
-                searchRequest.QueryOptions  = queryOptions;            
+                searchRequest.QueryOptions  = queryOptions;
+                searchRequest.Sort          = sort;
 
                 // Add the parameters as long as they've been 
                 if (!String.IsNullOrEmpty (filterQuery))
